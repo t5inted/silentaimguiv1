@@ -1,7 +1,8 @@
--- [[ /PLAYGIRLS UNIFIED HUB V4.9.8 - FINAL ]] --
+-- [[ /PLAYGIRLS UNIFIED HUB V4.9.9 - SNIPER DB UPDATE ]] --
 -- FIXED: Whitelist Scroll (Properly parented to ScrollingFrame with Auto-Canvas size)
 -- FIXED: FPS Unlocker (Traced Logic)
 -- FIXED: Signal Logic (RED = Off, YELLOW = Idle, GREEN = Active)
+-- ADDED: Sniper DB Logic & UI (Integrated math.random hook)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -17,6 +18,28 @@ getgenv().ShowFOV = false
 getgenv().TargetKnocked = false
 getgenv().FOVRadius = 100
 local Whitelist = {}
+
+-- [[ SNIPER DB CORE LOGIC ]] --
+local SniperSettings = {
+    Enabled = false,
+    Amount = 0
+}
+
+local oldRandom
+oldRandom = hookfunction(math.random, function(...)
+    local args = { ... }
+    if checkcaller() then
+        return oldRandom(...)
+    end
+    
+    -- Traced Spread Detection Logic
+    if (#args == 0) or (args[1] == -0.05 and args[2] == 0.05) or (args[1] == -0.1) or (args[1] == -0.05) then
+        if SniperSettings.Enabled then
+            return oldRandom(...) * (SniperSettings.Amount / 100)
+        end
+    end
+    return oldRandom(...)
+end)
 
 -- [[ UI SETUP ]] --
 local MainGui = Instance.new("ScreenGui", game.CoreGui)
@@ -234,6 +257,7 @@ end
 
 local CombatPage = CreatePage("Combat")
 local SilentPage = CreatePage("Silent")
+local SniperPage = CreatePage("Sniper DB")
 local WhitelistPage = CreatePage("Whitelist")
 local VisualPage = CreatePage("Visuals")
 local ESPPage = CreatePage("ESP")
@@ -262,6 +286,7 @@ end
 
 CreateTabBtn("Combat")
 CreateTabBtn("Silent")
+CreateTabBtn("Sniper DB")
 CreateTabBtn("Whitelist")
 CreateTabBtn("Visuals")
 CreateTabBtn("ESP")
@@ -313,7 +338,8 @@ local function CreateToggle(parent, text, bindType, default, callback, hasColor,
     elseif text == "Flamelock" then statusBars.Flame = status
     elseif text == "Mouselock" then statusBars.Magnet = status
     elseif text == "Speed Master" then statusBars.Speed = status
-    elseif text == "FPS Unlocker" then statusBars.FPS = status end
+    elseif text == "FPS Unlocker" then statusBars.FPS = status
+    elseif text == "Sniper DB" then statusBars.Sniper = status end
     
     local btn = Instance.new("TextButton", frame)
     btn.Size = UDim2.new(1, -12, 1, 0)
@@ -515,6 +541,11 @@ CreateToggle(SilentPage, "Silent Aim", nil, false, function(v) getgenv().SilentA
 CreateToggle(SilentPage, "Show FOV", nil, false, function(v) getgenv().ShowFOV = v end)
 CreateToggle(SilentPage, "Target Knocked", nil, false, function(v) getgenv().TargetKnocked = v end)
 CreateSlider(SilentPage, "Lock Radius", 0, 1000, 100, function(v) getgenv().FOVRadius = v end)
+
+-- [[ SNIPER DB PAGE ]] --
+CreateHeader(SniperPage, "SNIPER DB")
+CreateToggle(SniperPage, "Sniper DB", nil, false, function(v) SniperSettings.Enabled = v end)
+CreateSlider(SniperPage, "Spread Amount", 0, 100, 0, function(v) SniperSettings.Amount = v end)
 
 CreateHeader(VisualPage, "ATMOSPHERE PRESETS")
 local resetBtn = Instance.new("TextButton", VisualPage)
@@ -870,6 +901,7 @@ RunService.RenderStepped:Connect(function()
     setSignal(statusBars.Speed, FlameConfig.MasterSpeed, currentSpeedActive)
 
     setSignal(statusBars.FPS, FPSSettings.MasterEnabled, FPSSettings.MasterEnabled)
+    setSignal(statusBars.Sniper, SniperSettings.Enabled, SniperSettings.Enabled)
 
     FOVCircle.Visible = getgenv().ShowFOV
     FOVCircle.Radius = getgenv().FOVRadius
